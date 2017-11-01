@@ -181,8 +181,13 @@ pub fn parse(s: &str) -> Result<TokenStream> {
         use self::TokenKind::*;
         let (kind, lex) = match kar {
             c if c.is_whitespace() => {
-                col_no += 1;
-                if c == '\n' { line_no += 1; }
+                if c == '\n' {
+                    line_no += 1;
+                    // reset
+                    col_no = 1;
+                } else {
+                    col_no += 1;
+                }
                 continue
             }
             c @ '(' => (LeftParen,      c.to_string()),
