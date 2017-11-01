@@ -181,8 +181,8 @@ pub fn parse(s: &str) -> Result<TokenStream> {
         use self::TokenKind::*;
         let (kind, lex) = match kar {
             c if c.is_whitespace() => {
-                col_no = 1;
-                line_no += 1;
+                col_no += 1;
+                if c == '\n' { line_no += 1; }
                 continue
             }
             c @ '(' => (LeftParen,      c.to_string()),
@@ -266,10 +266,10 @@ pub fn parse(s: &str) -> Result<TokenStream> {
         match kind {
             TokenKind::Comment => {
                 line_no += 1;
-                col_no = 1;
+                col_no += 1;
             }
             TokenKind::Str => {
-                col_no += lex.len() as u32 + 2 // account for 2 double quotes
+                col_no += lex.len() as u32 + 2; // account for 2 double quotes
             }
             _ => {
                 col_no += lex.len() as u32;
