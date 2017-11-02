@@ -1,9 +1,11 @@
 
 use std::io;
+use rustyline;
 
 error_chain! {
     foreign_links {
         Io(io::Error);
+        ReadLine(rustyline::error::ReadlineError);
     }
     errors {
         ParseError(s: String) {

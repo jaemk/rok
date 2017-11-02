@@ -49,8 +49,10 @@ fn run() -> Result<()> {
         //let res = rok::eval(&tokens)?;
         //println!("{:?}", res);
     } else {
-        println!("starting interpreter");
-        rok::repl()?;
+        println!("Rok {}", crate_version!());
+        rok::Repl::new()
+            .save_history(true)
+            .run()?;
     }
     Ok(())
 }
