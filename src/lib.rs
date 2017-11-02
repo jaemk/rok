@@ -15,7 +15,7 @@ use std::fs;
 use std::env;
 use rustyline::error::ReadlineError;
 use errors::*;
-use token::Token;
+use token::{Token, TokenStream};
 
 
 pub fn eval(tokens: &[Token]) -> Result<()> {
@@ -74,14 +74,14 @@ impl Repl {
     }
 }
 
+
+trait RockAlphabetic {
+    fn is_rok_alphabetic(&self) -> bool;
 }
 
-pub fn repl() -> Result<()> {
-    loop {
-        let line = prompt_line("> ")?;
-        let tokens = token::parse(&line)?;
-        println!("~ {}", tokens);
+impl RockAlphabetic for char {
+    fn is_rok_alphabetic(&self) -> bool {
+        self.is_alphabetic() || *self == '-' || *self == '_' || *self == '?'
     }
-    Ok(())
 }
 
