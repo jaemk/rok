@@ -75,7 +75,7 @@ pub enum TokenKind {
     True,
     False,
     Let,
-    Fun,
+    Func,
     Nil,
     Return,
 
@@ -352,7 +352,7 @@ impl str::FromStr for TokenStream {
                         "true"      => (True, s),
                         "false"     => (False, s),
                         "let"       => (Let, s),
-                        "fn"        => (Fun, s),
+                        "fn"        => (Func, s),
                         "nil"       => (Nil, s),
                         "return"    => (Return, s),
                         _ => (Ident, s),
