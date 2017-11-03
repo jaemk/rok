@@ -8,6 +8,7 @@ extern crate rustyline;
 #[macro_use] mod macros;
 pub mod errors;
 pub mod token;
+pub mod value;
 
 //use std::io::{self, Write}; //BufRead};
 use std::path;
