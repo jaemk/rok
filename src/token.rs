@@ -1,11 +1,10 @@
+use errors::*;
+use itertools;
+use itertools::structs::PutBackN;
 use std::fmt;
 use std::ops;
 use std::str;
-use itertools;
-use itertools::structs::PutBackN;
-use {RockAlphabetic};
-use errors::*;
-
+use RockAlphabetic;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
@@ -27,10 +26,13 @@ impl Token {
 }
 impl fmt::Display for Token {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<{:?}: {:?} at (l:{}, c:{})>", self.kind, self.lexeme, self.source_line, self.source_column)
+        write!(
+            f,
+            "<{:?}: {:?} at (l:{}, c:{})>",
+            self.kind, self.lexeme, self.source_line, self.source_column
+        )
     }
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TokenKind {
@@ -86,9 +88,8 @@ pub enum TokenKind {
 
     // -- Misc --
     Comment,
-    EndOfFile
+    EndOfFile,
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TokenStream(Vec<Token>);
@@ -131,7 +132,8 @@ impl str::FromStr for TokenStream {
         let mut col_no = 1;
 
         fn match_next<T>(source: &mut PutBackN<T>, want: char) -> bool
-            where T: Iterator<Item=char>
+        where
+            T: Iterator<Item = char>,
         {
             let next = source.next();
             if let Some(next) = next {
@@ -141,7 +143,8 @@ impl str::FromStr for TokenStream {
         }
 
         fn get_next<T>(source: &mut PutBackN<T>) -> Option<char>
-            where T: Iterator<Item=char>
+        where
+            T: Iterator<Item = char>,
         {
             let next = source.next();
             if let Some(next) = next {
@@ -151,14 +154,15 @@ impl str::FromStr for TokenStream {
         }
 
         fn drain_until<T, F>(source: &mut PutBackN<T>, func: F) -> String
-            where T: Iterator<Item=char>,
-                  F: Fn(char) -> bool
+        where
+            T: Iterator<Item = char>,
+            F: Fn(char) -> bool,
         {
             let mut s = String::new();
             while let Some(next) = source.next() {
                 if func(next) {
                     source.put_back(next);
-                    return s
+                    return s;
                 }
                 s.push(next);
             }
@@ -166,27 +170,33 @@ impl str::FromStr for TokenStream {
         }
 
         fn drain_until_including<T, F>(source: &mut T, func: F) -> String
-            where T: Iterator<Item=char>,
-                  F: Fn(char) -> bool
+        where
+            T: Iterator<Item = char>,
+            F: Fn(char) -> bool,
         {
             let mut s = String::new();
             while let Some(next) = source.next() {
                 s.push(next);
-                if func(next) { break; }
+                if func(next) {
+                    break;
+                }
             }
             s
         }
 
         fn drain_to_required_including<T, F>(source: &mut T, func: F) -> Result<String>
-            where T: Iterator<Item=char>,
-                  F: Fn(char) -> bool
+        where
+            T: Iterator<Item = char>,
+            F: Fn(char) -> bool,
         {
             let mut s = String::new();
             while let Some(next) = source.next() {
                 s.push(next);
-                if func(next) { return Ok(s) }
+                if func(next) {
+                    return Ok(s);
+                }
             }
-            bail!("Unterminated")
+            Err(se!("Unterminated").into())
         }
 
         /// Parse the tail (fractional part) of a digit.
@@ -202,11 +212,12 @@ impl str::FromStr for TokenStream {
         /// E.g. we currently have "1234" with a `PutBackN` containing ['.', char, char, ...]
         ///      valid numbers can have a trailing dot
         fn get_digit_tail<T>(mut source: &mut PutBackN<T>) -> Result<String>
-            where T: Iterator<Item=char>
+        where
+            T: Iterator<Item = char>,
         {
             let mut s = String::new();
-            let next1 = source.next();  // the dot
-            let next2 = source.next();  // char after the dot
+            let next1 = source.next(); // the dot
+            let next2 = source.next(); // char after the dot
             if let Some(next2) = next2 {
                 source.put_back(next2);
 
@@ -219,7 +230,11 @@ impl str::FromStr for TokenStream {
                     let digit_tail = drain_until(&mut source, |c| !c.is_digit(10));
                     let next = get_next(&mut source).unwrap_or(' ');
                     if next.is_rok_alphabetic() {
-                        bail_fmt!(ErrorKind::ParseError, "Unexpected character: {:?}. Found alphabetic trailing a digit", next)
+                        return Err(se!(
+                            "Unexpected character: {:?}. Found alphabetic trailing a digit",
+                            next
+                        )
+                        .into());
                     }
                     s.push_str(&digit_tail);
                 }
@@ -236,26 +251,26 @@ impl str::FromStr for TokenStream {
                 c if c.is_whitespace() => {
                     if c == '\n' {
                         line_no += 1;
-                        col_no = 1;   // reset column
+                        col_no = 1; // reset column
                     } else {
                         col_no += 1;
                     }
-                    continue
+                    continue;
                 }
 
                 // handle signle character tokens
-                c @ '(' => (LeftParen,      c.to_string()),
-                c @ ')' => (RightParen,     c.to_string()),
-                c @ '[' => (LeftBrace,      c.to_string()),
-                c @ ']' => (RightBrace,     c.to_string()),
-                c @ '{' => (LeftBracket,    c.to_string()),
-                c @ '}' => (RightBracket,   c.to_string()),
-                c @ ',' => (Comma,          c.to_string()),
-                c @ '.' => (Dot,            c.to_string()),
-                c @ '+' => (Plus,           c.to_string()),
-                c @ '*' => (Star,           c.to_string()),
-                c @ ':' => (Colon,          c.to_string()),
-                c @ ';' => (SemiColon,      c.to_string()),
+                c @ '(' => (LeftParen, c.to_string()),
+                c @ ')' => (RightParen, c.to_string()),
+                c @ '[' => (LeftBrace, c.to_string()),
+                c @ ']' => (RightBrace, c.to_string()),
+                c @ '{' => (LeftBracket, c.to_string()),
+                c @ '}' => (RightBracket, c.to_string()),
+                c @ ',' => (Comma, c.to_string()),
+                c @ '.' => (Dot, c.to_string()),
+                c @ '+' => (Plus, c.to_string()),
+                c @ '*' => (Star, c.to_string()),
+                c @ ':' => (Colon, c.to_string()),
+                c @ ';' => (SemiColon, c.to_string()),
 
                 // handle the possibly double character tokens
                 c @ '!' => {
@@ -263,28 +278,36 @@ impl str::FromStr for TokenStream {
                         let mut s = c.to_string();
                         s.push(chars.next().unwrap());
                         (BangEqual, s)
-                    } else { (Bang, c.to_string()) }
+                    } else {
+                        (Bang, c.to_string())
+                    }
                 }
                 c @ '=' => {
                     if match_next(&mut chars, '=') {
                         let mut s = c.to_string();
                         s.push(chars.next().unwrap());
                         (EqualEqual, s)
-                    } else { (Equal, c.to_string()) }
+                    } else {
+                        (Equal, c.to_string())
+                    }
                 }
                 c @ '<' => {
                     if match_next(&mut chars, '=') {
                         let mut s = c.to_string();
                         s.push(chars.next().unwrap());
                         (LessEqual, s)
-                    } else { (Less, c.to_string()) }
+                    } else {
+                        (Less, c.to_string())
+                    }
                 }
                 c @ '>' => {
                     if match_next(&mut chars, '=') {
                         let mut s = c.to_string();
                         s.push(chars.next().unwrap());
                         (GreaterEqual, s)
-                    } else { (Greater, c.to_string()) }
+                    } else {
+                        (Greater, c.to_string())
+                    }
                 }
 
                 // hashmap literal
@@ -294,7 +317,8 @@ impl str::FromStr for TokenStream {
                         s.push(chars.next().unwrap());
                         (Map, s)
                     } else {
-                        let s = c.to_string() + &drain_until(&mut chars, |c| !c.is_rok_alphabetic());
+                        let s =
+                            c.to_string() + &drain_until(&mut chars, |c| !c.is_rok_alphabetic());
                         (Ident, s)
                     }
                 }
@@ -302,7 +326,7 @@ impl str::FromStr for TokenStream {
                 // handle comments (or slashes)
                 c @ '/' => {
                     if match_next(&mut chars, '/') {
-                        chars.next();                                                   // consume the second comment slash
+                        chars.next(); // consume the second comment slash
                         let comment = drain_until_including(&mut chars, |c| c == '\n'); // collect the comment
                         (Comment, comment.trim_right_matches("\n").to_owned())
                     } else {
@@ -312,13 +336,17 @@ impl str::FromStr for TokenStream {
 
                 // handle string literals
                 '"' => {
-                    let s = drain_to_required_including(&mut chars, |c| c == '"')
-                        .map_err(|_| format_err!(ErrorKind::ParseError, "Unterminated string at line {}, col {}", line_no, col_no))?;
+                    let s =
+                        drain_to_required_including(&mut chars, |c| c == '"').map_err(|_| {
+                            se!("Unterminated string at line {}, col {}", line_no, col_no)
+                        })?;
                     (Str, s.trim_right_matches("\"").to_owned())
                 }
                 '\'' => {
-                    let s = drain_to_required_including(&mut chars, |c| c == '\'')
-                        .map_err(|_| format_err!(ErrorKind::ParseError, "Unterminated string at line {}, col {}", line_no, col_no))?;
+                    let s =
+                        drain_to_required_including(&mut chars, |c| c == '\'').map_err(|_| {
+                            se!("Unterminated string at line {}, col {}", line_no, col_no)
+                        })?;
                     (Str, s.trim_right_matches("\'").to_owned())
                 }
 
@@ -330,9 +358,9 @@ impl str::FromStr for TokenStream {
                         let tail = get_digit_tail(&mut chars)?;
                         s.push_str(&tail);
                     } else if next.is_rok_alphabetic() {
-                        bail_fmt!(ErrorKind::ParseError,
+                        return Err(se!(
                                   "Unexpected character: {:?} at line {}, col {}. Found alphabetic trailing a digit",
-                                  next, line_no, col_no)
+                                  next, line_no, col_no).into());
                     }
                     (Num, s)
                 }
@@ -341,20 +369,20 @@ impl str::FromStr for TokenStream {
                 c => {
                     let s = c.to_string() + &drain_until(&mut chars, |c| !c.is_rok_alphabetic());
                     match s.as_str() {
-                        "for"       => (For, s),
-                        "in"        => (In, s),
-                        "while"     => (While, s),
-                        "loop"      => (Loop, s),
-                        "if"        => (If, s),
-                        "else"      => (Else, s),
-                        "and"       => (And, s),
-                        "or"        => (Or, s),
-                        "true"      => (True, s),
-                        "false"     => (False, s),
-                        "let"       => (Let, s),
-                        "fn"        => (Func, s),
-                        "nil"       => (Nil, s),
-                        "return"    => (Return, s),
+                        "for" => (For, s),
+                        "in" => (In, s),
+                        "while" => (While, s),
+                        "loop" => (Loop, s),
+                        "if" => (If, s),
+                        "else" => (Else, s),
+                        "and" => (And, s),
+                        "or" => (Or, s),
+                        "true" => (True, s),
+                        "false" => (False, s),
+                        "let" => (Let, s),
+                        "fn" => (Func, s),
+                        "nil" => (Nil, s),
+                        "return" => (Return, s),
                         _ => (Ident, s),
                     }
                 }
@@ -386,4 +414,3 @@ impl str::FromStr for TokenStream {
         Ok(tokens)
     }
 }
-

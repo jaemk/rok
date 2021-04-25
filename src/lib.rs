@@ -1,28 +1,25 @@
 #![recursion_limit = "1024"]
 
-#[macro_use] extern crate error_chain;
-extern crate num;
 extern crate itertools;
+extern crate num;
 extern crate rustyline;
 
-#[macro_use] mod macros;
+#[macro_use]
 pub mod errors;
 pub mod token;
 pub mod value;
 
 //use std::io::{self, Write}; //BufRead};
-use std::path;
-use std::fs;
-use std::env;
-use rustyline::error::ReadlineError;
 use errors::*;
+use rustyline::error::ReadlineError;
+use std::env;
+use std::fs;
+use std::path;
 use token::{Token, TokenStream};
-
 
 pub fn eval(tokens: &[Token]) -> Result<()> {
     unimplemented!()
 }
-
 
 pub struct Repl {
     save_history: bool,
@@ -62,7 +59,7 @@ impl Repl {
                 Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => {
                     break;
                 }
-                Err(e) => bail!(e),
+                Err(e) => return Err(se!("unknown: {}", e).into()),
             }
         }
         if let Some(ref history_path) = self.history_path {
@@ -75,7 +72,6 @@ impl Repl {
     }
 }
 
-
 trait RockAlphabetic {
     fn is_rok_alphabetic(&self) -> bool;
 }
@@ -85,4 +81,3 @@ impl RockAlphabetic for char {
         self.is_alphabetic() || *self == '-' || *self == '_' || *self == '?'
     }
 }
-
