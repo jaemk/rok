@@ -1,24 +1,29 @@
-#![recursion_limit = "1024"]
-
 extern crate itertools;
 extern crate num;
 extern crate rustyline;
+extern crate home;
 
 #[macro_use]
 pub mod errors;
 pub mod token;
 pub mod value;
+pub mod rt;
 
-//use std::io::{self, Write}; //BufRead};
 use errors::*;
 use rustyline::error::ReadlineError;
-use std::env;
 use std::fs;
 use std::path;
 use token::{Token, TokenStream};
+use crate::value::Value;
+use crate::rt::Scope;
 
-pub fn eval(tokens: &[Token]) -> Result<()> {
-    unimplemented!()
+pub fn read_eval(s: &str, scope: &mut Scope) -> Result<Value> {
+    // lex to tokens
+    let tokens = token::lex(s)?;
+    println!("tokens: {}", tokens);
+    // parse to forms
+    let values = value::parse(tokens)?;
+    Ok(rt::eval(values, scope)?)
 }
 
 pub struct Repl {
@@ -34,7 +39,7 @@ impl Repl {
     }
     pub fn save_history(&mut self, b: bool) -> &mut Self {
         self.save_history = b;
-        let path = env::home_dir().unwrap_or_else(|| path::PathBuf::from("."));
+        let path = home::home_dir().unwrap_or_else(|| path::PathBuf::from("."));
         self.history_path = Some(path.join(".rok_history"));
         self
     }
@@ -48,13 +53,20 @@ impl Repl {
         if let Some(ref history_path) = self.history_path {
             rl.load_history(history_path).ok();
         }
+        let mut scope = Scope {};
         loop {
             let line = rl.readline(">>> ");
             match line {
                 Ok(line) => {
                     rl.add_history_entry(line.as_ref());
-                    let tokens = &line.parse::<TokenStream>()?;
-                    println!("{}", tokens);
+                    let res = match read_eval(&line, &mut scope) {
+                        Err(e) => {
+                            println!("{}", e);
+                            continue
+                        }
+                        Ok(t) => t,
+                    };
+                    println!("{:?}", res);
                 }
                 Err(ReadlineError::Eof) | Err(ReadlineError::Interrupted) => {
                     break;

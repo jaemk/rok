@@ -1,5 +1,7 @@
 use std::collections::BTreeMap;
 use num;
+use crate::token::TokenStream;
+use crate::errors::Result;
 
 
 #[derive(Debug, Clone, Hash, PartialEq, PartialOrd)]
@@ -38,3 +40,7 @@ pub struct Function {
     body: Expression,
 }
 
+
+pub fn parse(tokens: TokenStream) -> Result<Vec<Value>> {
+    unimplemented!()
+}

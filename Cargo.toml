@@ -1,11 +1,13 @@
 [package]
 name = "rok"
 version = "0.1.0"
-authors = ["James Kominick <james.kominick@gmail.com>"]
+authors = ["James Kominick <james@kominick.com>"]
+edition = "2018"
 
 [dependencies]
 clap = "2"
 num = "0.1"
 itertools = "0.7"
 rustyline = "1"
+home = "0.5"
 

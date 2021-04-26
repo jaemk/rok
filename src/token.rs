@@ -1,10 +1,14 @@
-use errors::*;
+use crate::errors::{Result, Error};
 use itertools;
 use itertools::structs::PutBackN;
 use std::fmt;
 use std::ops;
 use std::str;
-use RockAlphabetic;
+use crate::RockAlphabetic;
+
+pub fn lex(s: &str) -> Result<TokenStream> {
+    s.parse::<TokenStream>()
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Token {
@@ -45,14 +49,13 @@ pub enum TokenKind {
 
     LeftBracket,
     RightBracket,
-    Map,
+    HashSetStart,
 
     Comma,
     Dot,
     Plus,
     Minus,
     Star,
-    Colon,
     SemiColon,
     Slash,
 
@@ -85,6 +88,7 @@ pub enum TokenKind {
     Ident,
     Str,
     Num,
+    Keyword,
 
     // -- Misc --
     Comment,
@@ -258,7 +262,7 @@ impl str::FromStr for TokenStream {
                     continue;
                 }
 
-                // handle signle character tokens
+                // handle single character tokens
                 c @ '(' => (LeftParen, c.to_string()),
                 c @ ')' => (RightParen, c.to_string()),
                 c @ '[' => (LeftBrace, c.to_string()),
@@ -269,7 +273,6 @@ impl str::FromStr for TokenStream {
                 c @ '.' => (Dot, c.to_string()),
                 c @ '+' => (Plus, c.to_string()),
                 c @ '*' => (Star, c.to_string()),
-                c @ ':' => (Colon, c.to_string()),
                 c @ ';' => (SemiColon, c.to_string()),
 
                 // handle the possibly double character tokens
@@ -310,12 +313,12 @@ impl str::FromStr for TokenStream {
                     }
                 }
 
-                // hashmap literal
+                // hashset literal
                 c @ '#' => {
                     if match_next(&mut chars, '{') {
                         let mut s = c.to_string();
                         s.push(chars.next().unwrap());
-                        (Map, s)
+                        (HashSetStart, s)
                     } else {
                         let s =
                             c.to_string() + &drain_until(&mut chars, |c| !c.is_rok_alphabetic());
@@ -323,12 +326,21 @@ impl str::FromStr for TokenStream {
                     }
                 }
 
+                // keyword literal
+                c @ ':' => {
+                    let s = c.to_string() + &drain_until(&mut chars, |c| !c.is_rok_alphabetic());
+                    if s == ":" {
+                        return Err(se!("Invalid keyword ':' at line {}, col {}", line_no, col_no).into());
+                    }
+                    (Keyword, s)
+                }
+
                 // handle comments (or slashes)
                 c @ '/' => {
                     if match_next(&mut chars, '/') {
                         chars.next(); // consume the second comment slash
                         let comment = drain_until_including(&mut chars, |c| c == '\n'); // collect the comment
-                        (Comment, comment.trim_right_matches("\n").to_owned())
+                        (Comment, comment.trim_end_matches("\n").to_owned())
                     } else {
                         (Slash, c.to_string())
                     }
@@ -340,14 +352,14 @@ impl str::FromStr for TokenStream {
                         drain_to_required_including(&mut chars, |c| c == '"').map_err(|_| {
                             se!("Unterminated string at line {}, col {}", line_no, col_no)
                         })?;
-                    (Str, s.trim_right_matches("\"").to_owned())
+                    (Str, s.trim_end_matches("\"").to_owned())
                 }
                 '\'' => {
                     let s =
                         drain_to_required_including(&mut chars, |c| c == '\'').map_err(|_| {
                             se!("Unterminated string at line {}, col {}", line_no, col_no)
                         })?;
-                    (Str, s.trim_right_matches("\'").to_owned())
+                    (Str, s.trim_end_matches("\'").to_owned())
                 }
 
                 // handle numbers (trailing dot allowed)
@@ -369,9 +381,9 @@ impl str::FromStr for TokenStream {
                 c => {
                     let s = c.to_string() + &drain_until(&mut chars, |c| !c.is_rok_alphabetic());
                     match s.as_str() {
-                        "for" => (For, s),
-                        "in" => (In, s),
-                        "while" => (While, s),
+                        // "for" => (For, s),
+                        // "in" => (In, s),
+                        // "while" => (While, s),
                         "loop" => (Loop, s),
                         "if" => (If, s),
                         "else" => (Else, s),
@@ -382,7 +394,7 @@ impl str::FromStr for TokenStream {
                         "let" => (Let, s),
                         "fn" => (Func, s),
                         "nil" => (Nil, s),
-                        "return" => (Return, s),
+                        // "return" => (Return, s),
                         _ => (Ident, s),
                     }
                 }
@@ -400,7 +412,7 @@ impl str::FromStr for TokenStream {
                     col_no += 1;
                 }
 
-                // account for surrounding qoutes
+                // account for surrounding quotes
                 Str => {
                     col_no += lex.len() as u32 + 2; // account for 2 double quotes
                 }

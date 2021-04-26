@@ -1,6 +1,3 @@
-use rustyline;
-use std::io;
-
 pub type Error = Box<dyn std::error::Error>;
 
 #[derive(Debug)]
