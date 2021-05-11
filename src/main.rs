@@ -6,7 +6,7 @@ extern crate clap;
 
 use clap::{App, Arg};
 use std::fs;
-use std::io::{Read};
+use std::io::Read;
 
 pub type Error = Box<dyn std::error::Error>;
 pub type Result<T> = std::result::Result<T, Error>;
@@ -17,7 +17,14 @@ fn run() -> Result<()> {
         .about("rok!")
         .help("Run a file, string, or start an interpreter")
         .arg(
+            Arg::with_name("asm")
+                .short("a")
+                .help("evaluate assembly")
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name("file")
+                .short("f")
                 .help("file to evaluate")
                 .takes_value(true),
         )
@@ -31,6 +38,7 @@ fn run() -> Result<()> {
         )
         .get_matches();
 
+    let asm = matches.is_present("asm");
     let src = if let Some(file) = matches.value_of("file") {
         println!("evaluating file: {}", file);
         let mut s = String::new();
@@ -44,13 +52,22 @@ fn run() -> Result<()> {
         None
     };
 
-    if let Some(_src) = src {
-        //let tokens = rok::parse(&src)?;
-        //let res = rok::eval(&tokens)?;
-        //println!("{:?}", res);
+    if asm {
+        if let Some(src) = src {
+            let res = rok::rt::read_eval(&src)?;
+            println!("{:?}", res);
+        } else {
+            println!("Rok {}", crate_version!());
+            rok::rt::Repl::new().save_history(true).run()?;
+        }
     } else {
-        println!("Rok {}", crate_version!());
-        rok::Repl::new().save_history(true).run()?;
+        if let Some(src) = src {
+            let res = rok::lang::read_eval(&src, &mut rok::lang::Scope {})?;
+            println!("{:?}", res);
+        } else {
+            println!("Rok {}", crate_version!());
+            rok::lang::Repl::new().save_history(true).run()?;
+        }
     }
     Ok(())
 }

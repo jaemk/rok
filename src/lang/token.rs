@@ -1,10 +1,10 @@
-use crate::errors::{Result, Error};
+use crate::errors::{Error, Result};
+use crate::lang::RockAlphabetic;
 use itertools;
 use itertools::structs::PutBackN;
 use std::fmt;
 use std::ops;
 use std::str;
-use crate::RockAlphabetic;
 
 pub fn lex(s: &str) -> Result<TokenStream> {
     s.parse::<TokenStream>()
@@ -52,7 +52,7 @@ pub enum TokenKind {
     HashSetStart,
 
     Comma,
-    Dot,
+    // Dot,
     Plus,
     Minus,
     Star,
@@ -96,7 +96,7 @@ pub enum TokenKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TokenStream(Vec<Token>);
+pub struct TokenStream(pub Vec<Token>);
 impl TokenStream {
     pub fn new() -> Self {
         TokenStream(vec![])
@@ -270,7 +270,7 @@ impl str::FromStr for TokenStream {
                 c @ '{' => (LeftBracket, c.to_string()),
                 c @ '}' => (RightBracket, c.to_string()),
                 c @ ',' => (Comma, c.to_string()),
-                c @ '.' => (Dot, c.to_string()),
+                // c @ '.' => (Dot, c.to_string()),
                 c @ '+' => (Plus, c.to_string()),
                 c @ '*' => (Star, c.to_string()),
                 c @ ';' => (SemiColon, c.to_string()),
@@ -330,7 +330,9 @@ impl str::FromStr for TokenStream {
                 c @ ':' => {
                     let s = c.to_string() + &drain_until(&mut chars, |c| !c.is_rok_alphabetic());
                     if s == ":" {
-                        return Err(se!("Invalid keyword ':' at line {}, col {}", line_no, col_no).into());
+                        return Err(
+                            se!("Invalid keyword ':' at line {}, col {}", line_no, col_no).into(),
+                        );
                     }
                     (Keyword, s)
                 }
